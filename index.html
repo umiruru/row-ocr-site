@@ -3,596 +3,583 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>1〜10 行OCR 合計</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <title>10マスOCR（1マス1値）</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
-      --bg: #f6f7fb;
+      --bg: #f5f7fb;
       --card: #ffffff;
       --text: #1f2937;
-      --muted: #6b7280;
+      --sub: #6b7280;
       --line: #d1d5db;
-      --line-strong: #374151;
       --accent: #111827;
-      --danger: #b91c1c;
+      --accent-2: #2563eb;
+      --ok: #166534;
+      --warn: #92400e;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
     }
     .wrap {
-      max-width: 1080px;
+      max-width: 880px;
       margin: 0 auto;
-      padding: 16px;
+      padding: 16px 14px 40px;
     }
     .card {
       background: var(--card);
-      border-radius: 16px;
+      border-radius: 22px;
       padding: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      box-shadow: 0 6px 24px rgba(17, 24, 39, 0.06);
       margin-bottom: 16px;
     }
     h1 {
-      font-size: 24px;
       margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.2;
     }
-    p { margin: 8px 0; line-height: 1.6; }
-    .muted { color: var(--muted); }
-    .itemBox {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #fafafa;
+    p {
+      margin: 8px 0;
+      line-height: 1.65;
+    }
+    .note {
+      color: var(--sub);
       font-size: 14px;
     }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 700;
+      margin-top: 8px;
+      background: #f9fafb;
     }
-    button, .fileLabel {
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0 10px;
+    }
+    button, .file-btn {
       appearance: none;
       border: 0;
-      border-radius: 12px;
-      padding: 12px 14px;
-      background: var(--accent);
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: #e5e7eb;
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 700;
       text-align: center;
     }
-    button.secondary, .fileLabel.secondary {
-      background: #e5e7eb;
-      color: #111827;
-    }
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .fileLabel input { display: none; }
-
-    .previewWrap {
+    button.primary { background: var(--accent); color: white; }
+    button.secondary { background: #eef2ff; color: #1e3a8a; }
+    button:disabled { opacity: 0.5; }
+    .stage {
       position: relative;
       width: 100%;
-      aspect-ratio: 16 / 10;
-      background: #111;
-      border-radius: 16px;
+      aspect-ratio: 16 / 9;
+      background: #111827;
+      border-radius: 20px;
       overflow: hidden;
-      margin-top: 14px;
+      margin-top: 10px;
     }
-    video, canvas.previewCanvas, img.previewImage {
+    video, canvas.preview {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
-      background: #111;
-    }
-    .overlay {
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
+      background: #111827;
     }
     .guide {
       position: absolute;
       left: 6%;
-      width: 88%;
-      top: 37%;
-      height: 18%;
-      border: 3px solid rgba(255,255,255,0.95);
-      border-radius: 8px;
-      display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      background: rgba(255,255,255,0.04);
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.24);
+      right: 6%;
+      top: 27%;
+      bottom: 27%;
+      border: 4px solid rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.22);
+      pointer-events: none;
     }
-    .guide > div {
-      border-right: 1px solid rgba(255,255,255,0.75);
-      position: relative;
-    }
-    .guide > div:last-child { border-right: 0; }
-    .guide > div::before {
-      content: '';
+    .guide::before {
+      content: "この枠に1行分をまっすぐ合わせる";
       position: absolute;
-      left: 48%;
-      top: 18%;
-      width: 2px;
-      height: 64%;
-      background: rgba(255,255,255,0.55);
-    }
-    .guide > div::after {
-      content: '';
-      position: absolute;
-      left: 58%;
-      top: 46%;
-      width: 5px;
-      height: 5px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.75);
-    }
-    .guideText {
-      position: absolute;
-      left: 6%;
-      top: 30%;
+      left: 0;
+      top: -34px;
       color: white;
+      font-size: 15px;
       font-weight: 700;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-      font-size: 14px;
-    }
-
-    .cropPreviewBox {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-top: 14px;
-    }
-    .cropCanvas {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,.45);
     }
     .status {
       margin-top: 10px;
-      font-size: 14px;
-      color: var(--muted);
-      white-space: pre-line;
+      font-weight: 700;
+      min-height: 28px;
     }
-    .status.error { color: var(--danger); }
-
-    .resultGrid {
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .results {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (min-width: 680px) {
+      .results { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    .cell {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+      background: #fafafa;
+    }
+    .label {
+      color: var(--sub);
+      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .input {
+      width: 100%;
+      border: 2px solid #d1d5db;
+      border-radius: 16px;
+      padding: 14px 12px;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      background: white;
+    }
+    .raw {
+      margin-top: 8px;
+      color: var(--sub);
+      font-size: 12px;
+      min-height: 18px;
+      word-break: break-all;
+    }
+    .sumbox {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      border: 4px solid #374151;
+      border-radius: 24px;
+      padding: 18px 20px;
+      margin-top: 16px;
+      background: white;
+    }
+    .sumtitle { color: var(--sub); font-size: 16px; font-weight: 700; }
+    .sumvalue { font-size: 56px; line-height: 1; font-weight: 800; }
+    .thumbs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
       margin-top: 14px;
     }
-    .cellCard {
+    .thumb {
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px;
-      background: #fcfcfd;
-    }
-    .cellCard label {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .cellCard input {
-      width: 100%;
-      font-size: 18px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-    }
-    .totalBox {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border: 2px solid var(--line-strong);
       border-radius: 14px;
-      padding: 14px 16px;
-      margin-top: 16px;
-      background: #fff;
+      overflow: hidden;
+      background: white;
     }
-    .totalLabel {
-      font-size: 14px;
-      color: var(--muted);
-    }
-    .totalValue {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-    }
-    .small {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 8px;
-    }
+    .thumb img { display: block; width: 100%; height: auto; }
+    .thumb .cap { padding: 8px 10px; font-size: 12px; color: var(--sub); }
     .hidden { display: none !important; }
-
-    @media (max-width: 720px) {
-      h1 { font-size: 22px; }
-      .resultGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .guideText { font-size: 12px; }
-      .totalValue { font-size: 28px; }
-    }
+    input[type="file"] { display: none; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>1〜10 行OCR 合計サイト</h1>
-      <p class="muted">この版は <strong>1行だけ</strong> 読み取る用です。<strong>各マスは「整数1桁」「印刷された . 」「小数1桁」</strong> の前提です。例: <strong>1.2 / 0.8 / 2.0</strong></p>
-      <div class="itemBox">品目: <strong id="itemName">未設定</strong></div>
-      <p>使い方: 読みたい <strong>1行だけ</strong> をガイド枠にまっすぐ合わせて撮影 → OCR実行 → 下の値を確認して合計。</p>
-
-      <div class="controls">
+      <h1>1〜10 OCRサイト</h1>
+      <p>この版は <strong>1マスにそのまま 1.8 / 1.2 / 0.4 / 0</strong> と書く前提です。<br>10マスだけ読みます。OCR後は下で手直しできます。</p>
+      <div class="pill">品目: <span id="itemName">未設定</span></div>
+      <p class="note">コツ: 1行だけ・濃く大きく・できるだけまっすぐ・枠いっぱいに撮る</p>
+      <div class="buttons">
         <button id="startBtn">カメラ開始</button>
-        <button id="stopBtn" class="secondary" disabled>カメラ停止</button>
-        <button id="captureBtn" disabled>撮影</button>
-        <label class="fileLabel secondary">画像を選択
-          <input id="fileInput" type="file" accept="image/*" capture="environment" />
-        </label>
-        <button id="ocrBtn" disabled>OCR実行</button>
+        <button id="stopBtn">カメラ停止</button>
+        <button id="snapBtn" class="primary">撮影</button>
+        <label class="file-btn secondary" for="fileInput">画像を選択</label>
       </div>
-
-      <div class="previewWrap">
-        <video id="video" playsinline muted></video>
-        <canvas id="captureCanvas" class="previewCanvas hidden"></canvas>
-        <div class="overlay" id="overlay">
-          <div class="guideText">この枠に 1行分をぴったり合わせる</div>
-          <div class="guide" id="guide"></div>
-        </div>
+      <div class="buttons">
+        <button id="ocrBtn" class="primary">OCR実行</button>
+        <button id="clearBtn">入力を全部クリア</button>
+        <button id="sampleBtn">サンプル値を入れる</button>
+        <button id="copyBtn">合計をコピー</button>
       </div>
-      <div class="status" id="status">待機中</div>
-      <div class="small">メモ: iPhone/Android のカメラは HTTPS または localhost で開く必要があります。</div>
+      <input id="fileInput" type="file" accept="image/*">
+      <div class="stage">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="capturedCanvas" class="preview hidden"></canvas>
+        <div class="guide"></div>
+      </div>
+      <div id="status" class="status">準備OK</div>
+      <div class="thumbs hidden" id="thumbs"></div>
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 8px; font-size:20px;">読み取りプレビュー</h2>
-      <p class="muted">上のガイド枠の中だけを切り出して使います。</p>
-      <div class="cropPreviewBox">
-        <canvas id="rowCanvas" class="cropCanvas" height="200"></canvas>
-      </div>
-      <div class="controls">
-        <button id="clearBtn" class="secondary">入力を全部クリア</button>
-        <button id="sampleBtn" class="secondary">サンプル値を入れる</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 style="margin:0 0 8px; font-size:20px;">1〜10 の結果</h2>
-      <p class="muted">OCRミスがあればここで手直ししてください。合計は自動更新します。</p>
-      <div class="resultGrid" id="resultGrid"></div>
-      <div class="totalBox">
+      <h2>1〜10 の結果</h2>
+      <p class="note">OCRミスがあればここで手直ししてください。合計は自動更新します。</p>
+      <div class="results" id="results"></div>
+      <div class="sumbox">
         <div>
-          <div class="totalLabel">合計</div>
-          <div class="small">空欄は無視します</div>
+          <div class="sumtitle">合計</div>
+          <div class="note">空欄は無視します</div>
         </div>
-        <div class="totalValue" id="totalValue">0.0</div>
+        <div class="sumvalue" id="sumValue">0.0</div>
       </div>
     </div>
   </div>
 
   <script>
-    const ui = {
-      video: document.getElementById('video'),
-      captureCanvas: document.getElementById('captureCanvas'),
-      rowCanvas: document.getElementById('rowCanvas'),
-      startBtn: document.getElementById('startBtn'),
-      stopBtn: document.getElementById('stopBtn'),
-      captureBtn: document.getElementById('captureBtn'),
-      ocrBtn: document.getElementById('ocrBtn'),
-      clearBtn: document.getElementById('clearBtn'),
-      sampleBtn: document.getElementById('sampleBtn'),
-      fileInput: document.getElementById('fileInput'),
-      status: document.getElementById('status'),
-      totalValue: document.getElementById('totalValue'),
-      itemName: document.getElementById('itemName'),
-      resultGrid: document.getElementById('resultGrid'),
-      overlay: document.getElementById('overlay')
-    };
-
-    const params = new URLSearchParams(location.search);
-    const itemName = params.get('name') || params.get('item') || '未設定';
-    ui.itemName.textContent = itemName;
-
-    const inputs = [];
-    for (let i = 1; i <= 10; i++) {
-      const box = document.createElement('div');
-      box.className = 'cellCard';
-      box.innerHTML = `<label>${i}</label><input inputmode="decimal" placeholder="例 1.2" data-index="${i}" />`;
-      const input = box.querySelector('input');
-      input.addEventListener('input', updateTotal);
-      inputs.push(input);
-      ui.resultGrid.appendChild(box);
-    }
+    const COLS = 10;
+    const video = document.getElementById('video');
+    const capturedCanvas = document.getElementById('capturedCanvas');
+    const fileInput = document.getElementById('fileInput');
+    const statusEl = document.getElementById('status');
+    const resultsEl = document.getElementById('results');
+    const thumbsEl = document.getElementById('thumbs');
+    const sumValueEl = document.getElementById('sumValue');
+    const itemNameEl = document.getElementById('itemName');
 
     let stream = null;
-    let latestSourceType = null;
+    let latestImageBitmap = null;
+    let latestFullImageCanvas = null;
     let worker = null;
+    let values = Array(COLS).fill('');
+    let raws = Array(COLS).fill('');
 
-    function setStatus(message, isError = false) {
-      ui.status.textContent = message;
-      ui.status.classList.toggle('error', !!isError);
+    function getNameFromUrl() {
+      const params = new URLSearchParams(location.search);
+      return params.get('name') || '未設定';
+    }
+    itemNameEl.textContent = getNameFromUrl();
+
+    function setStatus(text, type = '') {
+      statusEl.textContent = text;
+      statusEl.className = `status ${type}`.trim();
     }
 
-    function updateTotal() {
-      let total = 0;
-      for (const input of inputs) {
-        const v = parseFloat(input.value);
-        if (!Number.isNaN(v)) total += v;
+    function buildInputs() {
+      resultsEl.innerHTML = '';
+      for (let i = 0; i < COLS; i++) {
+        const card = document.createElement('div');
+        card.className = 'cell';
+        card.innerHTML = `
+          <div class="label">${i + 1}</div>
+          <input class="input" inputmode="decimal" placeholder="例 1.2">
+          <div class="raw"></div>
+        `;
+        const input = card.querySelector('.input');
+        const raw = card.querySelector('.raw');
+        input.value = values[i];
+        raw.textContent = raws[i] ? `OCR: ${raws[i]}` : '';
+        input.addEventListener('input', () => {
+          values[i] = normalizeManualInput(input.value);
+          input.value = values[i];
+          saveLocal();
+          updateSum();
+        });
+        resultsEl.appendChild(card);
       }
-      ui.totalValue.textContent = total.toFixed(1);
     }
 
-    function clearInputs() {
-      inputs.forEach(input => input.value = '');
-      updateTotal();
+    function updateInputs() {
+      [...resultsEl.children].forEach((card, i) => {
+        card.querySelector('.input').value = values[i];
+        card.querySelector('.raw').textContent = raws[i] ? `OCR: ${raws[i]}` : '';
+      });
+      updateSum();
+      saveLocal();
     }
 
-    function fillSample() {
-      const sample = ['1.2','0.8','0.0','1.4','2.5','0.9','1.0','0.6','2.0','1.2'];
-      sample.forEach((v, idx) => inputs[idx].value = v);
-      updateTotal();
+    function normalizeManualInput(value) {
+      let s = String(value || '').trim();
+      s = s.replace(/，/g, '.').replace(/,/g, '.').replace(/\s+/g, '');
+      s = s.replace(/[^0-9.]/g, '');
+      const firstDot = s.indexOf('.');
+      if (firstDot !== -1) {
+        s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+      }
+      if (s.startsWith('.')) s = '0' + s;
+      if (s === '') return '';
+      const n = Number(s);
+      if (!Number.isFinite(n)) return '';
+      return n.toFixed(1).replace(/\.0$/, '.0');
+    }
+
+    function updateSum() {
+      const total = values.reduce((acc, v) => acc + (parseFloat(v) || 0), 0);
+      sumValueEl.textContent = total.toFixed(1);
+    }
+
+    function saveLocal() {
+      localStorage.setItem('row_ocr_onecell_values', JSON.stringify(values));
+      localStorage.setItem('row_ocr_onecell_raws', JSON.stringify(raws));
+    }
+
+    function loadLocal() {
+      try {
+        const v = JSON.parse(localStorage.getItem('row_ocr_onecell_values') || '[]');
+        const r = JSON.parse(localStorage.getItem('row_ocr_onecell_raws') || '[]');
+        if (Array.isArray(v) && v.length === COLS) values = v;
+        if (Array.isArray(r) && r.length === COLS) raws = r;
+      } catch {}
+    }
+
+    async function ensureWorker() {
+      if (!worker) {
+        setStatus('OCR準備中…');
+        worker = await Tesseract.createWorker('eng', 1, {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setStatus(`OCR中… ${Math.round((m.progress || 0) * 100)}%`);
+            }
+          }
+        });
+        await worker.setParameters({
+          tessedit_pageseg_mode: Tesseract.PSM.SINGLE_WORD,
+          tessedit_char_whitelist: '0123456789.',
+          preserve_interword_spaces: '0'
+        });
+      }
+      return worker;
     }
 
     async function startCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
+          video: { facingMode: { ideal: 'environment' } },
           audio: false
         });
-        ui.video.srcObject = stream;
-        await ui.video.play();
-        latestSourceType = 'video';
-        ui.captureCanvas.classList.add('hidden');
-        ui.video.classList.remove('hidden');
-        ui.overlay.classList.remove('hidden');
-        ui.startBtn.disabled = true;
-        ui.stopBtn.disabled = false;
-        ui.captureBtn.disabled = false;
-        setStatus('カメラを開始しました。1行分をガイド枠に合わせて「撮影」を押してください。');
-      } catch (error) {
-        console.error(error);
-        setStatus('カメラを開始できませんでした。HTTPSで開いているか、カメラ権限があるか確認してください。', true);
+        video.srcObject = stream;
+        await video.play();
+        video.classList.remove('hidden');
+        capturedCanvas.classList.add('hidden');
+        setStatus('カメラ開始。枠に1行を合わせて撮影してください。', 'ok');
+      } catch (e) {
+        setStatus('カメラを開始できませんでした。SafariでHTTPSのURLを開いてください。', 'warn');
       }
     }
 
     function stopCamera() {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(t => t.stop());
         stream = null;
       }
-      ui.video.pause();
-      ui.video.srcObject = null;
-      ui.startBtn.disabled = false;
-      ui.stopBtn.disabled = true;
-      ui.captureBtn.disabled = true;
-      setStatus('カメラを停止しました。');
+      setStatus('カメラ停止');
     }
 
-    function drawGuideCropFromCurrentPreview() {
-      const source = latestSourceType === 'image' ? ui.captureCanvas : ui.video;
-      if (!source) return false;
-
-      const sw = source.videoWidth || source.width;
-      const sh = source.videoHeight || source.height;
-      if (!sw || !sh) return false;
-
-      const x = Math.round(sw * 0.06);
-      const y = Math.round(sh * 0.37);
-      const w = Math.round(sw * 0.88);
-      const h = Math.round(sh * 0.18);
-
-      const rowCanvas = ui.rowCanvas;
-      const targetH = 200;
-      const targetW = Math.round((w / h) * targetH);
-      rowCanvas.width = targetW;
-      rowCanvas.height = targetH;
-
-      const rctx = rowCanvas.getContext('2d');
-      rctx.clearRect(0, 0, rowCanvas.width, rowCanvas.height);
-      rctx.drawImage(source, x, y, w, h, 0, 0, rowCanvas.width, rowCanvas.height);
-      return true;
-    }
-
-    function captureFrame() {
-      if (!ui.video.videoWidth || !ui.video.videoHeight) {
-        setStatus('まだカメラ映像を取得できていません。少し待ってからもう一度押してください。', true);
+    function captureCurrentFrame() {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (!vw || !vh) {
+        setStatus('先にカメラ開始を押してください。', 'warn');
         return;
       }
-      ui.captureCanvas.width = ui.video.videoWidth;
-      ui.captureCanvas.height = ui.video.videoHeight;
-      const ctx = ui.captureCanvas.getContext('2d');
-      ctx.drawImage(ui.video, 0, 0);
-      latestSourceType = 'image';
-      ui.video.classList.add('hidden');
-      ui.captureCanvas.classList.remove('hidden');
-      drawGuideCropFromCurrentPreview();
-      ui.ocrBtn.disabled = false;
-      setStatus('撮影しました。問題なければ「OCR実行」を押してください。');
+      latestFullImageCanvas = document.createElement('canvas');
+      latestFullImageCanvas.width = vw;
+      latestFullImageCanvas.height = vh;
+      latestFullImageCanvas.getContext('2d').drawImage(video, 0, 0, vw, vh);
+      showPreview(latestFullImageCanvas);
+      setStatus('撮影しました。OCR実行を押してください。', 'ok');
     }
 
-    function loadImageFile(file) {
-      const reader = new FileReader();
-      reader.onload = event => {
-        const img = new Image();
-        img.onload = () => {
-          ui.captureCanvas.width = img.width;
-          ui.captureCanvas.height = img.height;
-          const ctx = ui.captureCanvas.getContext('2d');
-          ctx.clearRect(0, 0, img.width, img.height);
-          ctx.drawImage(img, 0, 0);
-          latestSourceType = 'image';
-          ui.video.classList.add('hidden');
-          ui.captureCanvas.classList.remove('hidden');
-          drawGuideCropFromCurrentPreview();
-          ui.ocrBtn.disabled = false;
-          setStatus('画像を読み込みました。画像は「1行分が中央に入っている」前提です。');
-        };
-        img.src = event.target.result;
+    async function loadImageFile(file) {
+      const img = new Image();
+      img.onload = () => {
+        latestFullImageCanvas = document.createElement('canvas');
+        latestFullImageCanvas.width = img.naturalWidth;
+        latestFullImageCanvas.height = img.naturalHeight;
+        latestFullImageCanvas.getContext('2d').drawImage(img, 0, 0);
+        showPreview(latestFullImageCanvas);
+        setStatus('画像を読み込みました。OCR実行を押してください。', 'ok');
       };
-      reader.readAsDataURL(file);
+      img.src = URL.createObjectURL(file);
     }
 
-    async function ensureWorker() {
-      if (worker) return worker;
-      setStatus('OCRエンジンを準備中...');
-      worker = await Tesseract.createWorker({
-        logger: message => {
-          if (message.status === 'recognizing text') {
-            const percent = Math.round((message.progress || 0) * 100);
-            setStatus(`OCR中... ${percent}%`);
-          }
-        }
-      });
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-      await worker.setParameters({
-        tessedit_char_whitelist: '0123456789',
-        tessedit_pageseg_mode: '10'
-      });
-      return worker;
+    function showPreview(sourceCanvas) {
+      const out = capturedCanvas;
+      out.width = sourceCanvas.width;
+      out.height = sourceCanvas.height;
+      out.getContext('2d').drawImage(sourceCanvas, 0, 0);
+      video.classList.add('hidden');
+      capturedCanvas.classList.remove('hidden');
     }
 
-    function preprocessCrop(sourceCanvas, sx, sy, sw, sh, scale = 4) {
-      const temp = document.createElement('canvas');
-      temp.width = Math.max(1, Math.round(sw * scale));
-      temp.height = Math.max(1, Math.round(sh * scale));
-      const ctx = temp.getContext('2d', { willReadFrequently: true });
-      ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, temp.width, temp.height);
-      ctx.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, temp.width, temp.height);
+    function getGuideCropFromCanvas(canvas) {
+      // Match the visual guide percentages.
+      const x = Math.round(canvas.width * 0.06);
+      const y = Math.round(canvas.height * 0.27);
+      const w = Math.round(canvas.width * 0.88);
+      const h = Math.round(canvas.height * 0.46);
+      return { x, y, w, h };
+    }
 
-      const image = ctx.getImageData(0, 0, temp.width, temp.height);
-      const data = image.data;
+    function cropCanvas(source, rect) {
+      const c = document.createElement('canvas');
+      c.width = rect.w;
+      c.height = rect.h;
+      c.getContext('2d').drawImage(source, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+      return c;
+    }
+
+    function preprocessCell(sourceCanvas) {
+      const out = document.createElement('canvas');
+      out.width = 480;
+      out.height = 300;
+      const ctx = out.getContext('2d');
+
+      // White background.
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, out.width, out.height);
+
+      // Draw central portion to avoid borders grabbing too much attention.
+      const sx = sourceCanvas.width * 0.08;
+      const sy = sourceCanvas.height * 0.16;
+      const sw = sourceCanvas.width * 0.84;
+      const sh = sourceCanvas.height * 0.68;
+      ctx.drawImage(sourceCanvas, sx, sy, sw, sh, 36, 24, out.width - 72, out.height - 48);
+
+      const img = ctx.getImageData(0, 0, out.width, out.height);
+      const d = img.data;
+      // grayscale + adaptive-ish threshold
       let sum = 0;
-      const grayValues = new Uint8ClampedArray(temp.width * temp.height);
-      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-        const gray = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
-        grayValues[p] = gray;
-        sum += gray;
+      for (let i = 0; i < d.length; i += 4) {
+        const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        d[i] = d[i + 1] = d[i + 2] = g;
+        sum += g;
       }
-      const avg = sum / grayValues.length;
-      const threshold = Math.max(110, Math.min(210, avg - 15));
-      let black = 0;
-      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-        const value = grayValues[p] < threshold ? 0 : 255;
-        if (value === 0) black++;
-        data[i] = value;
-        data[i + 1] = value;
-        data[i + 2] = value;
-        data[i + 3] = 255;
+      const avg = sum / (d.length / 4);
+      const threshold = Math.max(140, avg - 22);
+      for (let i = 0; i < d.length; i += 4) {
+        const v = d[i] < threshold ? 0 : 255;
+        d[i] = d[i + 1] = d[i + 2] = v;
       }
-      ctx.putImageData(image, 0, 0);
-      return { canvas: temp, inkRatio: black / grayValues.length };
+      ctx.putImageData(img, 0, 0);
+      return out;
     }
 
-    async function recognizeDigit(workerRef, canvas) {
-      const { data } = await workerRef.recognize(canvas);
-      const text = (data.text || '').replace(/\D/g, '');
-      return text ? text[0] : '';
+    function splitInto10Cells(rowCanvas) {
+      const cells = [];
+      const cw = rowCanvas.width / COLS;
+      for (let i = 0; i < COLS; i++) {
+        const x = Math.round(i * cw);
+        const w = Math.round((i + 1) * cw) - x;
+        // Focus on writing row rather than header area.
+        const y = Math.round(rowCanvas.height * 0.08);
+        const h = Math.round(rowCanvas.height * 0.72);
+        const cell = cropCanvas(rowCanvas, { x, y, w, h });
+        cells.push(cell);
+      }
+      return cells;
+    }
+
+    function normalizeOcr(raw) {
+      let s = String(raw || '').trim();
+      s = s.replace(/\s+/g, '');
+      s = s.replace(/[Oo○◯]/g, '0');
+      s = s.replace(/[Il｜l]/g, '1');
+      s = s.replace(/[,，]/g, '.');
+      s = s.replace(/[^0-9.]/g, '');
+      if (!s) return '';
+
+      // If multiple dots, keep the first.
+      const firstDot = s.indexOf('.');
+      if (firstDot !== -1) {
+        s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+      }
+
+      if (s.startsWith('.')) s = '0' + s;
+      if (s.endsWith('.')) s = s + '0';
+
+      // Heuristics for common OCR misses when the dot disappears.
+      if (!s.includes('.')) {
+        if (s.length >= 2) {
+          s = s.slice(0, -1) + '.' + s.slice(-1);
+        } else if (s.length === 1) {
+          s = s + '.0';
+        }
+      }
+
+      const n = Number(s);
+      if (!Number.isFinite(n)) return '';
+      return n.toFixed(1).replace(/\.0$/, '.0');
     }
 
     async function runOcr() {
-      const ready = drawGuideCropFromCurrentPreview();
-      if (!ready) {
-        setStatus('先に撮影か画像選択をしてください。', true);
+      if (!latestFullImageCanvas) {
+        setStatus('先に撮影か画像選択をしてください。', 'warn');
         return;
       }
-
+      thumbsEl.innerHTML = '';
+      thumbsEl.classList.remove('hidden');
+      const w = await ensureWorker();
       try {
-        ui.ocrBtn.disabled = true;
-        setStatus('OCRの準備中...');
-        const w = await ensureWorker();
-        const rowCanvas = ui.rowCanvas;
-        const cellW = rowCanvas.width / 10;
-        const rowH = rowCanvas.height;
+        const guide = getGuideCropFromCanvas(latestFullImageCanvas);
+        const row = cropCanvas(latestFullImageCanvas, guide);
+        const cells = splitInto10Cells(row);
+        raws = Array(COLS).fill('');
+        values = Array(COLS).fill('');
 
-        const values = [];
-        for (let i = 0; i < 10; i++) {
-          setStatus(`OCR中... ${i + 1} / 10`);
+        for (let i = 0; i < cells.length; i++) {
+          const pre = preprocessCell(cells[i]);
+          const thumb = document.createElement('div');
+          thumb.className = 'thumb';
+          thumb.innerHTML = `<img alt="cell ${i+1}"><div class="cap">${i + 1}</div>`;
+          thumb.querySelector('img').src = pre.toDataURL('image/png');
+          thumbsEl.appendChild(thumb);
 
-          const cellX = i * cellW;
-          const cellY = 0;
-          const cellInnerX = cellX + cellW * 0.08;
-          const cellInnerY = cellY + rowH * 0.14;
-          const cellInnerW = cellW * 0.84;
-          const cellInnerH = rowH * 0.72;
-
-          const leftBox = preprocessCrop(
-            rowCanvas,
-            cellInnerX + cellInnerW * 0.03,
-            cellInnerY,
-            cellInnerW * 0.33,
-            cellInnerH,
-            5
-          );
-          const rightBox = preprocessCrop(
-            rowCanvas,
-            cellInnerX + cellInnerW * 0.62,
-            cellInnerY,
-            cellInnerW * 0.25,
-            cellInnerH,
-            5
-          );
-
-          const leftBlank = leftBox.inkRatio < 0.02;
-          const rightBlank = rightBox.inkRatio < 0.02;
-
-          let value = '';
-          if (!(leftBlank && rightBlank)) {
-            const left = leftBlank ? '' : await recognizeDigit(w, leftBox.canvas);
-            const right = rightBlank ? '' : await recognizeDigit(w, rightBox.canvas);
-            if (left !== '' || right !== '') {
-              value = `${left || '0'}.${right || '0'}`;
-            }
-          }
-          values.push(value);
+          const { data: { text } } = await w.recognize(pre);
+          raws[i] = (text || '').trim();
+          values[i] = normalizeOcr(text);
+          updateInputs();
         }
-
-        values.forEach((value, idx) => inputs[idx].value = value);
-        updateTotal();
-        setStatus('OCRが終わりました。値を確認して必要なら手直ししてください。');
-      } catch (error) {
-        console.error(error);
-        setStatus('OCRでエラーが出ました。もう一度、もっとまっすぐ大きく撮って試してください。', true);
-      } finally {
-        ui.ocrBtn.disabled = false;
+        setStatus('OCRが終わりました。下の値を確認してください。', 'ok');
+      } catch (e) {
+        console.error(e);
+        setStatus('OCRに失敗しました。もう少し近く・まっすぐ撮ってください。', 'warn');
       }
     }
 
-    ui.startBtn.addEventListener('click', startCamera);
-    ui.stopBtn.addEventListener('click', stopCamera);
-    ui.captureBtn.addEventListener('click', captureFrame);
-    ui.ocrBtn.addEventListener('click', runOcr);
-    ui.clearBtn.addEventListener('click', clearInputs);
-    ui.sampleBtn.addEventListener('click', fillSample);
-    ui.fileInput.addEventListener('change', event => {
-      const file = event.target.files && event.target.files[0];
+    document.getElementById('startBtn').addEventListener('click', startCamera);
+    document.getElementById('stopBtn').addEventListener('click', stopCamera);
+    document.getElementById('snapBtn').addEventListener('click', captureCurrentFrame);
+    document.getElementById('ocrBtn').addEventListener('click', runOcr);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      values = Array(COLS).fill('');
+      raws = Array(COLS).fill('');
+      updateInputs();
+      thumbsEl.innerHTML = '';
+      thumbsEl.classList.add('hidden');
+      setStatus('クリアしました。');
+    });
+    document.getElementById('sampleBtn').addEventListener('click', () => {
+      values = ['1.8','1.2','1.4','1.2','1.8','1.9','1.2','0.4','0.0','1.3'];
+      raws = ['18','12','14','12','18','19','12','04','00','13'];
+      updateInputs();
+      setStatus('サンプル値を入れました。', 'ok');
+    });
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const text = sumValueEl.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(`合計 ${text} をコピーしました。`, 'ok');
+      } catch {
+        setStatus('コピーできませんでした。', 'warn');
+      }
+    });
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
       if (file) loadImageFile(file);
     });
 
-    window.addEventListener('beforeunload', () => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    });
-
-    updateTotal();
+    loadLocal();
+    buildInputs();
+    updateSum();
   </script>
 </body>
 </html>
