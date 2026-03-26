@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>1〜15 行OCR 合計</title>
+  <title>1〜10 行OCR 合計</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <style>
     :root {
@@ -108,7 +108,7 @@
       border: 3px solid rgba(255,255,255,0.95);
       border-radius: 8px;
       display: grid;
-      grid-template-columns: repeat(15, 1fr);
+      grid-template-columns: repeat(10, 1fr);
       background: rgba(255,255,255,0.04);
       box-shadow: 0 0 0 9999px rgba(0,0,0,0.24);
     }
@@ -230,7 +230,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>1〜15 行OCR 合計サイト</h1>
+      <h1>1〜10 行OCR 合計サイト</h1>
       <p class="muted">この版は <strong>1行だけ</strong> 読み取る用です。<strong>各マスは「整数1桁」「印刷された . 」「小数1桁」</strong> の前提です。例: <strong>1.2 / 0.8 / 2.0</strong></p>
       <div class="itemBox">品目: <strong id="itemName">未設定</strong></div>
       <p>使い方: 読みたい <strong>1行だけ</strong> をガイド枠にまっすぐ合わせて撮影 → OCR実行 → 下の値を確認して合計。</p>
@@ -270,7 +270,7 @@
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 8px; font-size:20px;">1〜15 の結果</h2>
+      <h2 style="margin:0 0 8px; font-size:20px;">1〜10 の結果</h2>
       <p class="muted">OCRミスがあればここで手直ししてください。合計は自動更新します。</p>
       <div class="resultGrid" id="resultGrid"></div>
       <div class="totalBox">
@@ -307,7 +307,7 @@
     ui.itemName.textContent = itemName;
 
     const inputs = [];
-    for (let i = 1; i <= 15; i++) {
+    for (let i = 1; i <= 10; i++) {
       const box = document.createElement('div');
       box.className = 'cellCard';
       box.innerHTML = `<label>${i}</label><input inputmode="decimal" placeholder="例 1.2" data-index="${i}" />`;
@@ -341,7 +341,7 @@
     }
 
     function fillSample() {
-      const sample = ['1.2','0.8','0.0','1.4','2.5','0.9','1.0','0.6','2.0','1.2','0.8','1.1','0.5','1.3','0.0'];
+      const sample = ['1.2','0.8','0.0','1.4','2.5','0.9','1.0','0.6','2.0','1.2'];
       sample.forEach((v, idx) => inputs[idx].value = v);
       updateTotal();
     }
@@ -521,12 +521,12 @@
         setStatus('OCRの準備中...');
         const w = await ensureWorker();
         const rowCanvas = ui.rowCanvas;
-        const cellW = rowCanvas.width / 15;
+        const cellW = rowCanvas.width / 10;
         const rowH = rowCanvas.height;
 
         const values = [];
-        for (let i = 0; i < 15; i++) {
-          setStatus(`OCR中... ${i + 1} / 15`);
+        for (let i = 0; i < 10; i++) {
+          setStatus(`OCR中... ${i + 1} / 10`);
 
           const cellX = i * cellW;
           const cellY = 0;
